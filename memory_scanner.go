@@ -6,27 +6,31 @@ import (
 	"fmt"
 )
 
-type MemoryScanner struct {
+type PeekingScanner struct {
 	src      *bufio.Scanner
 	remember string
 }
 
-func (s *MemoryScanner) Err() error {
+func (s *PeekingScanner) Err() error {
 	return s.src.Err()
 }
 
-func (s *MemoryScanner) Remember(line string) {
-	s.remember = line
+func (s *PeekingScanner) Peek() string {
+	if !s.src.Scan() {
+		return ""
+	}
+	s.remember = s.src.Text()
+	return s.remember
 }
 
-func (s *MemoryScanner) Scan() bool {
+func (s *PeekingScanner) Scan() bool {
 	if s.remember == "" {
 		return s.src.Scan()
 	}
 	return true
 }
 
-func (s *MemoryScanner) Text() string {
+func (s *PeekingScanner) Text() string {
 	if s.remember == "" {
 		return s.src.Text()
 	}
@@ -38,14 +42,14 @@ func (s *MemoryScanner) Text() string {
 func main() {
 	targets := "One\nTwo\nThree\nFour\nFive\n"
 	reader := bytes.NewBufferString(targets)
-	sc := MemoryScanner{src: bufio.NewScanner(reader)}
+	sc := PeekingScanner{src: bufio.NewScanner(reader)}
 	remembered := false
 	for i := 0; i < 7; i++ {
 		if sc.Scan() {
 			fmt.Printf("SCAN OK, iteration %d: %s\n", i, sc.Text())
-			if !remembered && sc.Text() == "Three" {
-				sc.Remember("Three")
+			if !remembered && sc.Peek() == "Three" {
 				remembered = true
+				fmt.Printf("...peek returned true, next Scan should still return Three...\n")
 			}
 		} else {
 			fmt.Printf("SCAN FAIL: iteration %d\n", i)
